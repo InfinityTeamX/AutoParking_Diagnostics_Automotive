@@ -4,7 +4,7 @@
 #define FIFOSUCCESS 1         // return value on success
 #define FIFOFAIL    0         // return value on failure
 typedef char txDataType;
-
+/////
 void TxFifo_Init(void);
 
 int TxFifo_Put(txDataType data);
