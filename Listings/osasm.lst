@@ -90,9 +90,9 @@ ARM Macro Assembler    Page 2
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
 erwork --depend=.\objects\osasm.d -o.\objects\osasm.o -I.\RTE\_Target_1 -IC:\Ke
-il_v5\ARM\PACK\ARM\CMSIS\5.1.0\CMSIS\Include -IC:\Keil_v5\ARM\PACK\Keil\TM4C_DF
+il_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include -IC:\Keil_v5\ARM\PACK\Keil\TM4C_DF
 P\1.1.0\Device\Include\TM4C123 --predefine="__EVAL SETA 1" --predefine="__UVISI
-ON_VERSION SETA 524" --predefine="_RTE_ SETA 1" --predefine="TM4C123GH6PM SETA 
+ON_VERSION SETA 523" --predefine="_RTE_ SETA 1" --predefine="TM4C123GH6PM SETA 
 1" --list=.\listings\osasm.lst os\osasm.s
 
 
