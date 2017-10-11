@@ -1,27 +1,4 @@
-// UARTTestMain.c
-// Runs on LM4F120/TM4C123
-// Used to test the UART.c driver
-// Daniel Valvano
-// May 30, 2014
 
-/* This example accompanies the book
-   "Embedded Systems: Real Time Interfacing to Arm Cortex M Microcontrollers",
-   ISBN: 978-1463590154, Jonathan Valvano, copyright (c) 2015
-
- Copyright 2015 by Jonathan W. Valvano, valvano@mail.utexas.edu
-    You may use, edit, run or distribute this file
-    as long as the above copyright notice remains
- THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHETHER EXPRESS, IMPLIED
- OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF
- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE.
- VALVANO SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL,
- OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
- For more information about my classes, my research, and my books, see
- http://users.ece.utexas.edu/~valvano/
- */
-
-// U0Rx (VCP receive) connected to PA0
-// U0Tx (VCP transmit) connected to PA1
 #include <stdint.h>
 //#include "CPX/PLL/PLL.h"
 #include "CPX/UART/UART.h"
@@ -99,13 +76,9 @@ void static OutCRLF(void){
  char ch;
 int main(void){
  
-  //char string[50];  // global to assist in debugging
- // uint32_t n;
+
 	OS_Init();
   OS_AddThreads(&Task0,0,&Task1,0,&Task2,0,&Task3,0,&Task4,0,&Task5,0,&Task6,0);
-			/*PLL_Init(Bus80MHz);
-			//UART_Init(115200);              // initialize UART
-			*/
 	tp_Init();
 	OS_Launch(OS_Clock_GetFreq()/THREADFREQ); // doesn't return, interrupts enabled in here
 	while(1){

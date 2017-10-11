@@ -2,6 +2,7 @@
 ".\objects\uarttestmain.o"
 ".\objects\tp_transiver.o"
 ".\objects\nvicinterrupthandler.o"
+".\objects\uds.o"
 ".\objects\os.o"
 ".\objects\os_cfg.o"
 ".\objects\osasm.o"

@@ -400,6 +400,11 @@
               <FileType>1</FileType>
               <FilePath>.\SAL\NVICInterruptHandler.c</FilePath>
             </File>
+            <File>
+              <FileName>UDS.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SAL\UDS.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
