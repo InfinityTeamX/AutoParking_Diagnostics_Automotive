@@ -15,3 +15,6 @@
 .\objects\uds.o: SAL\../HAL/../RAL/hw_types.h
 .\objects\uds.o: SAL\../HAL/../RAL/hw_sysctrl.h
 .\objects\uds.o: SAL\../HAL/../RAL/hw_gpio.h
+.\objects\uds.o: SAL\stack.h
+.\objects\uds.o: SAL\../os/os.h
+.\objects\uds.o: SAL\../os/os_cfg.h

@@ -5,6 +5,7 @@
 .\objects\uarttestmain.o: CPX/UART/FIFO_Modi.h
 .\objects\uarttestmain.o: CPX/UART/../../os/os.h
 .\objects\uarttestmain.o: CPX/UART/../../os/os_cfg.h
+.\objects\uarttestmain.o: SAL/UDS.h
 .\objects\uarttestmain.o: SAL/tp_transiver.h
 .\objects\uarttestmain.o: SAL/../RAL/types.h
 .\objects\uarttestmain.o: SAL/../CPX/UART/UART.h
@@ -18,5 +19,8 @@
 .\objects\uarttestmain.o: SAL/../HAL/../RAL/hw_types.h
 .\objects\uarttestmain.o: SAL/../HAL/../RAL/hw_sysctrl.h
 .\objects\uarttestmain.o: SAL/../HAL/../RAL/hw_gpio.h
+.\objects\uarttestmain.o: SAL/stack.h
+.\objects\uarttestmain.o: SAL/../os/os.h
+.\objects\uarttestmain.o: SAL/../os/os_cfg.h
 .\objects\uarttestmain.o: os/os.h
 .\objects\uarttestmain.o: os/os_cfg.h

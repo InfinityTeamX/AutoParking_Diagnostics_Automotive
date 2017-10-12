@@ -72,6 +72,7 @@ void OS_Init(void){
 void SetInitialStack(int i){
  // ****IMPLEMENT THIS**** 
  // **Same as Lab 2 and Lab 3****
+	
  tcbs[i].sp = &Stacks[i][STACKSIZE-16]; // thread stack pointer
  Stacks[i][STACKSIZE-1] = 0x01000000; // thumb bit
  Stacks[i][STACKSIZE-3] = 0x14141414; // R14

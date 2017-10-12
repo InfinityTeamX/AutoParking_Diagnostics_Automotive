@@ -21,11 +21,12 @@ void TP_Sender_TX_RX_Handler(void);
 void TP_Receiver_TX_RX_Handler(void);
 #define FFrame_DataSize	6
 #define ConFrame_DataSize 7 
- 
+#define SFrame_DataSize  7
+
 #define FF_ID				0x10	//Frist Frame
 #define FC_ID				0x30  //FlowControl
 #define COF_ID			0x21	//Cons. Frame
-#define COF_ID_END  0x3F  //
+#define COF_ID_END  0x2F  //
 static void send_single_frame(uint8 * buffer, uint8 len);
 static void send_first_frame(uint8 * buffer, uint8 len);
 static void send_cons_frame(uint8 * buffer, uint8 numConFrame, uint8 stMin);
@@ -50,11 +51,11 @@ void tp_sender(uint8_t *buffer, uint8 len){
     /*single frame*/
 	  OS_Wait(&Peripheral_Mutex);
 	  installNIVCISRFunction(UART0,TP_Sender_TX_RX_Handler);
-    if (len < 8)
+    if (len <= SFrame_DataSize)
     {
         send_single_frame(buffer, len);
     }
-    /*Con Frame*/
+    
 /*
 #ifdef  UART0
 		//os_wait(&UART_Mutex);
@@ -67,7 +68,7 @@ void tp_sender(uint8_t *buffer, uint8 len){
 		#endif
 */
 	
-    else if (len > 7)
+    else if (len > SFrame_DataSize)
 			
     {
 			  //OS_InitSemaphore(&NewSwData,0);
@@ -116,11 +117,23 @@ static void send_single_frame(uint8 * buffer, uint8 len)
 {
     gSFrame_t s_frame;
     s_frame.DLC = len;
-    uint8 index = 0;
-    for (index = 0; index < len; index++)
-    {
+    /*
+    for (uint8 index = 0; index < len; index++)
+    {  
+			 
         s_frame.data[index] = buffer[index];
     }
+		*/
+	  for (uint8 index = 0; index < SFrame_DataSize; index++)
+    {  
+			 if(index < len){
+        s_frame.data[index] = buffer[index];
+			 }
+			 else {
+			  s_frame.data[index] = 0;
+			 }
+    }
+		
     CAN_TX((uint8_t*) &s_frame);
 		
 		//LIN_TX();
@@ -208,7 +221,7 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 		//int8_t DArr[SFrame->DLC]; open heap
 		*Datalen = SFrame->DLC;
 		
-		for(uint8_t i=0; i<=(uint8_t)(SFrame->DLC);i++ ){
+		for(uint8_t i=0; i<(uint8_t)(SFrame->DLC);i++ ){
 			#ifdef DEBUG
 			Data[i]=SFrame->data[i];
 			*Mainbuffer=Data[i];
@@ -247,7 +260,7 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 				RemFrames=Get_remaing_frames_number(RemBytes);
 				
 				/***************** Cons. Frame *****************/
-				while(RemFrames){
+				while(RemFrames){ //4
 				//generate block size decision
 				//Send control Frame
 					if(ErrorFlag==1){
@@ -284,7 +297,8 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 						 }
 						 else  {
 							 ErrorFlag=1;
-							 
+							 //Flush Buffer
+							 //*Datalen =0
 							 break;
 						 }
 					 
@@ -360,7 +374,7 @@ uint8 static Get_remaing_frames_number(uint8 RemaingBytes){
   remFrame=RemaingBytes/ConFrame_DataSize;
   if(RemaingBytes-remFrame*7){
 	   remFrame++;
-	}		
+	}
 	//Generate number of remaing Frames
 	return remFrame;
 	
@@ -376,17 +390,29 @@ uint8 static generate_BS_decision(uint8_t RemaingFrames){
 
 void TP_UART_Default_Interrupt_Task(void){
 		if(UART0_RIS_R&UART_RIS_TXRIS){       // hardware TX FIFO <= 2 items
-    UART0_ICR_R = UART_ICR_TXIC;        // acknowledge TX FIFO
-    // copy from software TX FIFO to hardware TX FIFO
-    copySoftwareToHardware();
-    if(TxFifo_Size() == 0){             // software TX FIFO is empty
-      UART0_IM_R &= ~UART_IM_TXIM;      // disable TX FIFO interrupt
-    }
-  }
-		else{
-		UART0_ICR_R = UART0_RIS_R; //clear all
+				UART0_ICR_R = UART_ICR_TXIC;        // acknowledge TX FIFO
+				// copy from software TX FIFO to hardware TX FIFO
+				copySoftwareToHardware();
+				if(TxFifo_Size() == 0){             // software TX FIFO is empty
+					UART0_IM_R &= ~UART_IM_TXIM;      // disable TX FIFO interrupt
+				}
+			}
+			if(UART0_RIS_R&UART_RIS_RXRIS){       // hardware RX FIFO >= 2 items
+				UART0_ICR_R = UART_ICR_RXIC;        // acknowledge RX FIFO
+				// copy from hardware RX FIFO to software RX FIFO
+				copyHardwareToSoftware();
+				//OS_Signal(&NewSwData);
+				//OS_Signal(&NewReceData);
+			}
+			if(UART0_RIS_R&UART_RIS_RTRIS){       // receiver timed out
+				UART0_ICR_R = UART_ICR_RTIC;        // acknowledge receiver time out
+				// copy from hardware RX FIFO to software RX FIFO
+				copyHardwareToSoftware();
+			}
+				else{
+				UART0_ICR_R = UART0_RIS_R; //clear all
 
-		}
+				}
 }
 
 void TP_Receiver_TX_RX_Handler(){
