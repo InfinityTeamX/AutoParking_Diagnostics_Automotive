@@ -4,12 +4,5 @@
 edit edit
 =======
 <<<<<<< HEAD
-test
-=======
-edit edit
->>>>>>> DEVELOPING
-hhhhhhh
->>>>>>> TPtesting
-=======
-
->>>>>>> TPtesting
+tes
+====
