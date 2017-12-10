@@ -21,8 +21,7 @@ void TP_Sender_TX_RX_Handler(void);
 void TP_Receiver_TX_RX_Handler(void);
 #define FFrame_DataSize	6
 #define ConFrame_DataSize 7 
-#define SFrame_DataSize  7
-
+ 
 #define FF_ID				0x10	//Frist Frame
 #define FC_ID				0x30  //FlowControl
 #define COF_ID			0x21	//Cons. Frame
@@ -42,6 +41,7 @@ void tp_Init(void){
 	OS_InitSemaphore(&NewReceData,0);
 	OS_InitSemaphore(&Peripheral_Mutex,1);
 	UART_Init(115200);
+	
 	installNIVCISRFunction(UART0,TP_UART_Default_Interrupt_Task);
 	
 }
@@ -51,11 +51,11 @@ void tp_sender(uint8_t *buffer, uint8 len){
     /*single frame*/
 	  OS_Wait(&Peripheral_Mutex);
 	  installNIVCISRFunction(UART0,TP_Sender_TX_RX_Handler);
-    if (len <= SFrame_DataSize)
+    if (len < 8)
     {
         send_single_frame(buffer, len);
     }
-    
+    /*Con Frame*/
 /*
 #ifdef  UART0
 		//os_wait(&UART_Mutex);
@@ -68,16 +68,11 @@ void tp_sender(uint8_t *buffer, uint8 len){
 		#endif
 */
 	
-    else if (len > SFrame_DataSize)
+    else if (len > 7)
 			
     {
 			  //OS_InitSemaphore(&NewSwData,0);
         send_first_frame(buffer, len);
-			
-			
-				
-			   
-			 
         gFlowFrame_t flowBuffer;
         c_frame_T.ID = COF_ID;
         while (currentDataposition < len)
@@ -104,6 +99,7 @@ void tp_sender(uint8_t *buffer, uint8 len){
             else
             {
                 /*Do nothing*/
+							break;
             }
         }
 
@@ -117,23 +113,11 @@ static void send_single_frame(uint8 * buffer, uint8 len)
 {
     gSFrame_t s_frame;
     s_frame.DLC = len;
-    /*
-    for (uint8 index = 0; index < len; index++)
-    {  
-			 
+    uint8 index = 0;
+    for (index = 0; index < len; index++)
+    {
         s_frame.data[index] = buffer[index];
     }
-		*/
-	  for (uint8 index = 0; index < SFrame_DataSize; index++)
-    {  
-			 if(index < len){
-        s_frame.data[index] = buffer[index];
-			 }
-			 else {
-			  s_frame.data[index] = 0;
-			 }
-    }
-		
     CAN_TX((uint8_t*) &s_frame);
 		
 		//LIN_TX();
@@ -158,9 +142,6 @@ static void send_first_frame(uint8 * buffer, uint8 len)
 
 static void send_cons_frame(uint8 * buffer, uint8 dataSize, uint8 stMin)
 {
-  
-   
-    
     uint8 counter = 0;
     uint8 index;
     for (index = currentDataposition;
@@ -174,7 +155,7 @@ static void send_cons_frame(uint8 * buffer, uint8 dataSize, uint8 stMin)
             CAN_TX((uint8*) &c_frame_T);
 				   	c_frame_T.ID++;
             counter = 0;
-            if (c_frame_T.ID == COF_ID_END)
+            if (c_frame_T.ID == COF_ID_END+1)
             {
                 c_frame_T.ID = COF_ID;
             }
@@ -220,7 +201,7 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 		SFrame = (gSFrame_t*)InFrame;
 		//int8_t DArr[SFrame->DLC]; open heap
 		*Datalen = SFrame->DLC;
-		
+		if(*Datalen<8){
 		for(uint8_t i=0; i<(uint8_t)(SFrame->DLC);i++ ){
 			#ifdef DEBUG
 			Data[i]=SFrame->data[i];
@@ -231,6 +212,8 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 			Mainbuffer++;
 			
 		}
+	}else{
+	*Datalen =0;}
 		//Data
 		//buffer=Data;
 		
@@ -238,6 +221,8 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 	/***************** First Frame *****************/
 	else if(FrameType == FirstFrame){
 		    uint8 ErrorFlag=0;
+		    uint32_t flag=0;
+		    uint32_t k=0;
 				uint8_t i;
 				uint8 BS_Real;
 				gFFrame_t* FFrame;
@@ -260,12 +245,12 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 				RemFrames=Get_remaing_frames_number(RemBytes);
 				
 				/***************** Cons. Frame *****************/
-				while(RemFrames){ //4
+				while(RemFrames){
 				//generate block size decision
 				//Send control Frame
 					if(ErrorFlag==1){
 						*Datalen=0;
-						break;
+						break; 
 					}
 					BS_size= generate_BS_decision(RemFrames);
 					BS_Real= BS_size;
@@ -273,12 +258,17 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 						BS_size=0;
 					}
 					send_Control_Frame(BS_size,20);  //The pointer to the MainBuffer corrupted here ?????
-					for(int j=0;j<BS_Real;j++){
+					for(int j=0;j<BS_Real;j++){ 
+						UART0_CTL_R &= ~UART_CTL_RXE;
+						OS_Sleep(5);
+						UART0_CTL_R |= UART_CTL_RXE; 
 							OS_Wait(&NewReceData);
 						//receive the remain Con Frames
 						CAN_RX((uint8_t*)&c_frame_R);
-						 if(c_frame_R.ID == COF_ID+j){
-							 if(c_frame_R.ID == COF_ID_END){}
+						 if((c_frame_R.ID == COF_ID+j)||((flag!=0)&&(c_frame_R.ID == COF_ID+j-k))){
+							 if(c_frame_R.ID == COF_ID_END){
+							 flag++;
+							 k=flag*(COF_ID_END-COF_ID+1);}
 							 for(int w=0; w< ConFrame_DataSize ; w++ ){
 								/* if(w==RemBytes){
 								 }*/
@@ -296,13 +286,11 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 							 RemFrames--;
 						 }
 						 else  {
-							 ErrorFlag=1;
-							 //Flush Buffer
-							 //*Datalen =0
-							 break;
+					  ErrorFlag=1;
+            break;								
 						 }
 					 
-			}
+					 }
 		}
 		//buffer=Data;
 	}
@@ -311,6 +299,7 @@ void tp_receiver(uint8 *Mainbuffer,uint8 *Datalen){ //interrupt from physical la
 		*Datalen =0;
 	}
 		//receive FF [0x10,DLC,6-Data]
+	  
 		deInstallNIVCISRFunction(UART0);
 		OS_Signal(&Peripheral_Mutex);
 	
@@ -374,7 +363,7 @@ uint8 static Get_remaing_frames_number(uint8 RemaingBytes){
   remFrame=RemaingBytes/ConFrame_DataSize;
   if(RemaingBytes-remFrame*7){
 	   remFrame++;
-	}
+	}		
 	//Generate number of remaing Frames
 	return remFrame;
 	
@@ -390,29 +379,17 @@ uint8 static generate_BS_decision(uint8_t RemaingFrames){
 
 void TP_UART_Default_Interrupt_Task(void){
 		if(UART0_RIS_R&UART_RIS_TXRIS){       // hardware TX FIFO <= 2 items
-				UART0_ICR_R = UART_ICR_TXIC;        // acknowledge TX FIFO
-				// copy from software TX FIFO to hardware TX FIFO
-				copySoftwareToHardware();
-				if(TxFifo_Size() == 0){             // software TX FIFO is empty
-					UART0_IM_R &= ~UART_IM_TXIM;      // disable TX FIFO interrupt
-				}
-			}
-			if(UART0_RIS_R&UART_RIS_RXRIS){       // hardware RX FIFO >= 2 items
-				UART0_ICR_R = UART_ICR_RXIC;        // acknowledge RX FIFO
-				// copy from hardware RX FIFO to software RX FIFO
-				copyHardwareToSoftware();
-				//OS_Signal(&NewSwData);
-				//OS_Signal(&NewReceData);
-			}
-			if(UART0_RIS_R&UART_RIS_RTRIS){       // receiver timed out
-				UART0_ICR_R = UART_ICR_RTIC;        // acknowledge receiver time out
-				// copy from hardware RX FIFO to software RX FIFO
-				copyHardwareToSoftware();
-			}
-				else{
-				UART0_ICR_R = UART0_RIS_R; //clear all
+    UART0_ICR_R = UART_ICR_TXIC;        // acknowledge TX FIFO
+    // copy from software TX FIFO to hardware TX FIFO
+    copySoftwareToHardware();
+    if(TxFifo_Size() == 0){             // software TX FIFO is empty
+      UART0_IM_R &= ~UART_IM_TXIM;      // disable TX FIFO interrupt
+    }
+	}
+		else{
+		UART0_ICR_R = UART0_RIS_R; //clear all
 
-				}
+		}
 }
 
 void TP_Receiver_TX_RX_Handler(){
@@ -437,14 +414,21 @@ void TP_Receiver_TX_RX_Handler(){
   }
   if(UART0_RIS_R&UART_RIS_RTRIS){       // receiver timed out
     UART0_ICR_R = UART_ICR_RTIC;        // acknowledge receiver time out
+		char l;
     // copy from hardware RX FIFO to software RX FIFO
-    copyHardwareToSoftware();
+    // copyHardwareToSoftware();
+		for(int h=0;h<16;h++){   //emty hw fifo
+		l = UART0_DR_R;}
   }
+	//for test
+  //	copyHardwareToSoftware();
+  //  l = UART0_DR_R;
+  //RxFifo_Put(l);
 }
 
 void TP_Sender_TX_RX_Handler(){
 	
-		//if(RX_flag)
+	//if(RX_flag)
   //FF OR Cons.Frame	
 	//if(tx_flag)
 	//FControl
